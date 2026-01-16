@@ -140,6 +140,14 @@ public class GraphicsEngine: ObservableObject {
     }
     
     // MARK: - Visual Updates
+    public func focusCamera(on node: NetworkService.Node) {
+        cameraTransitionManager?.focusOnPoints([(node.lat, node.lon)])
+    }
+    
+    public func resetCamera() {
+        cameraTransitionManager?.resetView()
+    }
+
     private func handleViewModeChange(_ mode: ApplicationState.ViewMode) {
         let mixTarget: Float = (mode == .globe3D) ? 0.0 : 1.0
         

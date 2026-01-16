@@ -4,55 +4,62 @@ import SceneKit
 /// Main entry point for the 3D Globe visualization.
 /// Uses the modular GraphicsEngine for rendering and state management.
 @available(iOS 15.0, macOS 12.0, *)
+@available(iOS 15.0, macOS 12.0, *)
 public struct Globe3DWidget: View {
-    @StateObject private var controller: ApplicationController
     
-    public init() {
-        let engine = GraphicsEngine()
-        let networkService = NetworkService()
-        let state = engine.state
-        
-        _controller = StateObject(wrappedValue: ApplicationController(
-            engine: engine,
-            networkService: networkService,
-            state: state
-        ))
-    }
+    @StateObject private var viewModel = GlobeViewModel()
+    
+    public init() {}
     
     public var body: some View {
         ZStack {
-            SceneView(
-                scene: controller.engine.scene,
-                options: [.allowsCameraControl, .autoenablesDefaultLighting],
-                delegate: SceneDelegate()
-            )
-            .onAppear {
-                controller.start()
+            MapKitGlobeView(viewModel: viewModel)
+                .edgesIgnoringSafeArea(.all)
+                
+            // HUD Overlay (Top Right)
+            VStack {
+                HStack {
+                    Spacer()
+                    if let selectedNode = viewModel.selectedNode {
+                        NodeDetailView(
+                            node: selectedNode,
+                            themeManager: viewModel.themeManager,
+                            onClose: { viewModel.clearSelection() }
+                        )
+                        .padding()
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                        .animation(.spring(), value: viewModel.selectedNode?.id)
+                    }
+                }
+                Spacer()
             }
             
             // Interaction Layer
             VStack {
                 Spacer()
-                HStack(spacing: 20) {
-                    InteractionButton(title: "Fail NYC", color: .red) {
-                        controller.simulateFailure(at: "NYC")
+                
+                // Tour Network Controls
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.nodes) { node in
+                            InteractionButton(
+                                title: node.id,
+                                color: node.status == .error ? .red : viewModel.themeManager.accentColor
+                            ) {
+                                viewModel.selectNode(node.id)
+                            }
+                        }
+                        
+                        // Theme Toggle
+                        InteractionButton(title: "Theme", color: viewModel.themeManager.secondaryColor) {
+                            viewModel.cycleTheme()
+                        }
                     }
-                    
-                    InteractionButton(title: "Fail LAX", color: .orange) {
-                        controller.simulateFailure(at: "LAX")
-                    }
-                    
-                    InteractionButton(title: "Toggle 2D/3D", color: .blue) {
-                        controller.state.viewMode = (controller.state.viewMode == .globe3D) ? .map2D : .globe3D
-                    }
+                    .padding(.horizontal)
                 }
                 .padding(.bottom, 40)
             }
-            
-            // Performance Overlay
-            PerformanceOverlay(engine: controller.engine)
         }
-        .edgesIgnoringSafeArea(.all)
     }
 }
 
@@ -73,42 +80,6 @@ private struct InteractionButton: View {
                 .cornerRadius(8)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.3)))
         }
-    }
-}
-
-// MARK: - Subviews
-private struct PerformanceOverlay: View {
-    @ObservedObject var engine: GraphicsEngine
-    
-    var body: some View {
-        VStack {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("FPS: \(String(format: "%.1f", engine.frameRate))")
-                        .foregroundColor(.green)
-                    Text("Draw Calls: \(engine.drawCallCount)")
-                        .foregroundColor(.yellow)
-                    Text("Mode: \(engine.state.viewMode == .globe3D ? "3D" : "2D")")
-                        .foregroundColor(.cyan)
-                }
-                .font(.system(.caption, design: .monospaced))
-                .padding(8)
-                .background(Color.black.opacity(0.8))
-                .cornerRadius(10)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.1)))
-                
-                Spacer()
-            }
-            .padding()
-            Spacer()
-        }
-    }
-}
-
-// MARK: - Scene Delegate
-private class SceneDelegate: NSObject, SCNSceneRendererDelegate {
-    func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
-        // Advanced frame pacing and optimization can be implemented here
     }
 }
 

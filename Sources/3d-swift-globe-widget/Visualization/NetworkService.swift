@@ -11,6 +11,16 @@ public class NetworkService: ObservableObject {
         public let lon: Double
         public let type: String
         public var status: Status
+        public let load: Double // 0.0 to 1.0 representing server load/traffic
+        
+        public init(id: String, lat: Double, lon: Double, type: String, status: Status = .active, load: Double = 0.0) {
+            self.id = id
+            self.lat = lat
+            self.lon = lon
+            self.type = type
+            self.status = status
+            self.load = load
+        }
         
         public enum Status {
             case active, inactive, error
@@ -37,17 +47,30 @@ public class NetworkService: ObservableObject {
     
     /// Loads initial network data
     public func loadData() {
-        let mockNodes = [
-            Node(id: "NYC", lat: 40.7128, lon: -74.0060, type: "DataCenter", status: .active),
-            Node(id: "LAX", lat: 34.0522, lon: -118.2437, type: "EdgeNode", status: .active),
-            Node(id: "LON", lat: 51.5074, lon: -0.1278, type: "DataCenter", status: .active)
+        let globalNodes = [
+            Node(id: "NYC", lat: 40.7128, lon: -74.0060, type: "HUB", status: .active, load: 0.9),
+            Node(id: "LAX", lat: 34.0522, lon: -118.2437, type: "NODE", status: .active, load: 0.4),
+            Node(id: "LON", lat: 51.5074, lon: -0.1278, type: "HUB", status: .active, load: 0.8),
+            Node(id: "NRT", lat: 35.6762, lon: 139.6503, type: "NODE", status: .active, load: 0.6),
+            Node(id: "SYD", lat: -33.8688, lon: 151.2093, type: "NODE", status: .active, load: 0.3),
+            
+            // Clustering Test Nodes (NYC Area)
+            Node(id: "JFK", lat: 40.6413, lon: -73.7781, type: "NODE", status: .active, load: 0.7),
+            Node(id: "EWR", lat: 40.6895, lon: -74.1745, type: "NODE", status: .active, load: 0.5)
         ]
         
-        let mockConns = [
-            Connection(id: "NYC-LAX", sourceId: "NYC", targetId: "LAX", weight: 0.9),
-            Connection(id: "NYC-LON", sourceId: "NYC", targetId: "LON", weight: 0.7)
+        let globalConns = [
+            Connection(id: "C1", sourceId: "NYC", targetId: "LAX", weight: 0.9),
+            Connection(id: "C2", sourceId: "NYC", targetId: "LON", weight: 0.8),
+            Connection(id: "C3", sourceId: "LAX", targetId: "NRT", weight: 0.7),
+            Connection(id: "C4", sourceId: "NRT", targetId: "SYD", weight: 0.6),
+            Connection(id: "C5", sourceId: "LON", targetId: "NRT", weight: 0.5),
+            
+            // Local connections
+            Connection(id: "C6", sourceId: "NYC", targetId: "JFK", weight: 0.1),
+            Connection(id: "C7", sourceId: "NYC", targetId: "EWR", weight: 0.1)
         ]
         
-        updateNetwork(nodes: mockNodes, connections: mockConns)
+        updateNetwork(nodes: globalNodes, connections: globalConns)
     }
 }

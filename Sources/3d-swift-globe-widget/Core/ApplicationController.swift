@@ -44,6 +44,14 @@ public class ApplicationController: ObservableObject {
         let position = GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
         engine.triggerBurst(at: position, color: .red) // Failure red
         
+        // 3. Dynamic Camera Focus
+        engine.focusCamera(on: node)
+        
+        // Auto-reset after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.engine.resetCamera()
+        }
+        
         print("ApplicationController: Simulated failure at \(nodeId)")
     }
     
