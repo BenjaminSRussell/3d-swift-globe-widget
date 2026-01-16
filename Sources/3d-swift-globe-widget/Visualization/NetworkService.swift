@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+// TODO: Stage 3 - Integrate with NetworkTopologyRenderer for advanced visualization
+// TODO: Stage 3 - Add real-time data streaming capabilities
+// TODO: Stage 3 - Implement batch update optimization for large networks
+// TODO: Stage 3 - Add support for different topology types (hierarchical, mesh, star)
+
 /// Manages network topology and real-time updates
 @available(iOS 15.0, macOS 12.0, *)
 public class NetworkService: ObservableObject {

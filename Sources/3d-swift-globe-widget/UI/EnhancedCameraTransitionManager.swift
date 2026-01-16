@@ -1,8 +1,8 @@
 import SceneKit
 import Foundation
 
-/// Manages camera transitions and auto-fitting logic
-/// Enhanced for Phase 2: Advanced Globe Morphing and Camera Systems
+/// Enhanced camera transition manager with Stage 5 auto-fitting capabilities
+/// Integrates advanced auto-fitting algorithms with existing transition system
 @MainActor
 @available(iOS 15.0, macOS 12.0, *)
 public class CameraTransitionManager {
@@ -10,63 +10,76 @@ public class CameraTransitionManager {
     private let cameraNode: SCNNode
     private var currentTransition: CameraTransition?
     
-    public init(cameraNode: SCNNode) {
+    // Stage 5: Auto-fitting camera system
+    private var autoFitSystem: AutoFitCameraSystem?
+    
+    public init(cameraNode: SCNNode, scene: SCNScene? = nil) {
         self.cameraNode = cameraNode
+        
+        // Initialize auto-fitting system if scene is provided
+        if let scene = scene {
+            self.autoFitSystem = AutoFitCameraSystem(cameraNode: cameraNode, scene: scene)
+        }
     }
     
-    // MARK: - Advanced Camera Transitions
+    // MARK: - Stage 5 Enhanced Methods
     
-    /// Calculates optimal camera position for viewing multiple points
-    /// Enhanced for Stage 2: Advanced auto-fitting algorithms
-    /// - Parameter points: Array of (latitude, longitude) tuples
-    /// - Returns: Tuple containing (center position, optimal distance, bounding sphere)
-    public func calculateOptimalCameraPosition(for points: [(Double, Double)]) -> (SCNVector3, Float, BoundingSphere) {
-        guard !points.isEmpty else { return (SCNVector3(0, 0, 3), 3.0, BoundingSphere(center: SCNVector3Zero, radius: 1.0)) }
-        
-        // Convert all points to 3D cartesian coordinates
-        let positions3D = points.map { GeospatialMath.latLonToCartesian(lat: $0.0, lon: $0.1, radius: 1.0) }
-        
-        // Calculate bounding sphere that encompasses all points
-        let boundingSphere = calculateBoundingSphere(for: positions3D)
-        
-        // Calculate optimal camera distance based on field of view
-        let optimalDistance = calculateOptimalDistance(for: boundingSphere.radius)
-        
-        // Position camera at optimal distance from sphere center
-        let cameraPosition = boundingSphere.center.normalized() * optimalDistance
-        
-        return (cameraPosition, optimalDistance, boundingSphere)
-    }
-    
-    /// Focuses camera on specified points with auto-fitting
-    /// Enhanced for Stage 2: Intelligent framing with smooth transitions
+    /// Auto-fits camera to display specified nodes with intelligent framing
     /// - Parameters:
-    ///   - points: Array of (latitude, longitude) tuples
-    ///   - duration: Transition duration
-    ///   - padding: Additional padding around bounding box (0.0-1.0)
-    ///   - completion: Completion handler
-    public func focusOnPoints(_ points: [(Double, Double)], duration: TimeInterval = 1.0, padding: Float = 0.1, completion: (() -> Void)? = nil) {
+    ///   - nodeIds: Array of node identifiers to fit in view
+    ///   - mode: Current view mode (3D, 2D, or hybrid)
+    ///   - completion: Optional completion handler
+    public func autoFitToNodes(
+        _ nodeIds: [String],
+        mode: ViewMode = .globe3D,
+        completion: (() -> Void)? = nil
+    ) {
+        autoFitSystem?.fitToNodes(nodeIds, mode: mode, completion: completion)
+    }
+    
+    /// Smart focus using weighted algorithms
+    /// - Parameters:
+    ///   - nodeIds: Nodes to focus on
+    ///   - strategy: Focus strategy (connection density, critical path, etc.)
+    ///   - completion: Optional completion handler
+    public func smartFocus(
+        _ nodeIds: [String],
+        strategy: FocusStrategy = .default,
+        completion: (() -> Void)? = nil
+    ) {
+        autoFitSystem?.smartFocus(nodeIds, strategy: strategy, completion: completion)
+    }
+    
+    /// Updates camera system for performance optimization
+    /// - Parameter deltaTime: Time since last frame
+    public func update(deltaTime: TimeInterval) {
+        autoFitSystem?.update(deltaTime: deltaTime)
+    }
+    
+    /// Invalidates cached bounds data
+    public func invalidateCache() {
+        autoFitSystem?.invalidateCache()
+    }
+    
+    // MARK: - Existing Advanced Camera Transitions
+    
+    /// Animates camera to focus on a set of coordinates with easing
+    public func focusOnPoints(_ points: [(Double, Double)], duration: TimeInterval = 1.0, completion: (() -> Void)? = nil) {
         guard !points.isEmpty else { return }
         
-        let (centerPos, optimalDistance, boundingSphere) = calculateOptimalCameraPosition(for: points)
+        // Calculate optimal camera position for viewing points
+        let (centerPos, optimalDistance) = calculateOptimalCameraPosition(for: points)
         
-        // Apply padding to ensure all points are visible
-        let paddedDistance = optimalDistance * (1.0 + padding)
-        let finalPosition = centerPos.normalized() * paddedDistance
-        
-        // Create smooth transition with enhanced easing
+        // Create smooth transition
         let transition = CameraTransition(
             type: .focus,
             startPosition: cameraNode.position,
-            endPosition: finalPosition,
+            endPosition: centerPos,
             duration: duration,
             completion: completion
         )
         
         executeTransition(transition)
-        
-        // Point camera towards bounding sphere center
-        cameraNode.look(at: boundingSphere.center)
     }
     
     /// Smooth morphing transition between 3D and 2D views
@@ -197,7 +210,6 @@ public class CameraTransitionManager {
         
         SCNTransaction.begin()
         SCNTransaction.animationDuration = transition.duration
-        // Enhanced easing function for smoother transitions
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         SCNTransaction.completionBlock = { _ in
             transition.completion?()
@@ -226,45 +238,6 @@ public class CameraTransitionManager {
         SCNTransaction.commit()
     }
     
-    // MARK: - Stage 2 Enhanced Helper Methods
-    
-    /// Calculates bounding sphere for a set of 3D points
-    /// - Parameter positions: Array of SCNVector3 positions
-    /// - Returns: Bounding sphere containing all points
-    private func calculateBoundingSphere(for positions: [SCNVector3]) -> BoundingSphere {
-        guard !positions.isEmpty else { return BoundingSphere(center: SCNVector3Zero, radius: 1.0) }
-        
-        // Calculate centroid
-        let sum = positions.reduce(SCNVector3Zero) { result, position in
-            SCNVector3(result.x + position.x, result.y + position.y, result.z + position.z)
-        }
-        let centroid = SCNVector3(sum.x / Float(positions.count), sum.y / Float(positions.count), sum.z / Float(positions.count))
-        
-        // Find maximum distance from centroid
-        let maxDistance = positions.map { position in
-            let dx = position.x - centroid.x
-            let dy = position.y - centroid.y
-            let dz = position.z - centroid.z
-            return sqrt(dx*dx + dy*dy + dz*dz)
-        }.max() ?? 1.0
-        
-        return BoundingSphere(center: centroid, radius: maxDistance)
-    }
-    
-    /// Calculates optimal camera distance based on bounding sphere radius and field of view
-    /// - Parameter boundingRadius: Radius of bounding sphere
-    /// - Returns: Optimal camera distance
-    private func calculateOptimalDistance(for boundingRadius: Float) -> Float {
-        // TODO: Consider camera field of view for accurate calculation
-        // TODO: Account for aspect ratio differences
-        // TODO: Add safety margin for edge cases
-        
-        // Simple calculation: ensure sphere fits in view with margin
-        let fovRadians: Float = .pi / 3 // Assuming 60 degree FOV
-        let distance = boundingRadius / sin(fovRadians / 2)
-        return distance * 1.2 // 20% safety margin
-    }
-    
     private func cancelCurrentTransition() {
         if let transition = currentTransition {
             switch transition.type {
@@ -280,16 +253,17 @@ public class CameraTransitionManager {
 
 // MARK: - Supporting Types
 
-/// Represents a bounding sphere for 3D calculations
-public struct BoundingSphere {
-    let center: SCNVector3
-    let radius: Float
-}
-
 public enum ViewMode {
     case globe3D
     case globe2D
     case hybrid
+}
+
+public enum FocusStrategy {
+    case `default`
+    case connectionDensity
+    case criticalPath
+    case weightedAverage
 }
 
 private struct CameraTransition {
