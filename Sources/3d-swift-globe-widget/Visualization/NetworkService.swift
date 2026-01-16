@@ -37,6 +37,19 @@ public class NetworkService: ObservableObject {
         public let sourceId: String
         public let targetId: String
         public var weight: Double
+        public var status: Status
+        
+        public init(id: String, sourceId: String, targetId: String, weight: Double, status: Status = .active) {
+            self.id = id
+            self.sourceId = sourceId
+            self.targetId = targetId
+            self.weight = weight
+            self.status = status
+        }
+        
+        public enum Status {
+            case active, inactive, error
+        }
     }
     
     @Published public var nodes: [Node] = []
@@ -65,15 +78,15 @@ public class NetworkService: ObservableObject {
         ]
         
         let globalConns = [
-            Connection(id: "C1", sourceId: "NYC", targetId: "LAX", weight: 0.9),
-            Connection(id: "C2", sourceId: "NYC", targetId: "LON", weight: 0.8),
-            Connection(id: "C3", sourceId: "LAX", targetId: "NRT", weight: 0.7),
-            Connection(id: "C4", sourceId: "NRT", targetId: "SYD", weight: 0.6),
-            Connection(id: "C5", sourceId: "LON", targetId: "NRT", weight: 0.5),
+            Connection(id: "C1", sourceId: "NYC", targetId: "LAX", weight: 0.9, status: .active),
+            Connection(id: "C2", sourceId: "NYC", targetId: "LON", weight: 0.8, status: .active),
+            Connection(id: "C3", sourceId: "LAX", targetId: "NRT", weight: 0.7, status: .active),
+            Connection(id: "C4", sourceId: "NRT", targetId: "SYD", weight: 0.6, status: .active),
+            Connection(id: "C5", sourceId: "LON", targetId: "NRT", weight: 0.5, status: .active),
             
             // Local connections
-            Connection(id: "C6", sourceId: "NYC", targetId: "JFK", weight: 0.1),
-            Connection(id: "C7", sourceId: "NYC", targetId: "EWR", weight: 0.1)
+            Connection(id: "C6", sourceId: "NYC", targetId: "JFK", weight: 0.1, status: .active),
+            Connection(id: "C7", sourceId: "NYC", targetId: "EWR", weight: 0.1, status: .active)
         ]
         
         updateNetwork(nodes: globalNodes, connections: globalConns)

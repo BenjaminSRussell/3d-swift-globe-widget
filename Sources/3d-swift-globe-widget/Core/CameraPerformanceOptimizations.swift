@@ -141,14 +141,12 @@ public class SmartFocusCalculator {
     // MARK: - Private Focus Strategies
     
     private func calculateDefaultFocus(_ nodeIds: [String]) -> (position: SCNVector3, lookAt: SCNVector3)? {
-        // TODO: Get actual node positions from NetworkService
-        // For now, use placeholder positions
-        let positions = nodeIds.map { _ in
-            SCNVector3(
-                Float.random(in: -1...1),
-                Float.random(in: -1...1),
-                Float.random(in: -1...1)
-            )
+        // Get actual node positions from NetworkService
+        let positions = nodeIds.compactMap { nodeId in
+            if let node = networkService.nodes.first(where: { $0.id == nodeId }) {
+                return Math.GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
+            }
+            return nil
         }
         
         guard !positions.isEmpty else { return nil }
@@ -171,11 +169,12 @@ public class SmartFocusCalculator {
     }
     
     private func calculateCriticalPathFocus(_ nodeIds: [String]) -> (position: SCNVector3, lookAt: SCNVector3)? {
-        // TODO: Implement network topology analysis to find critical nodes
-        // For now, use connection count as heuristic
+        // Network topology analysis to find critical nodes based on connection count
         let criticalNodes = nodeIds.filter { nodeId in
-            // Placeholder: assume nodes with even IDs are critical
-            return Int(nodeId.dropFirst())?.isMultiple(of: 2) ?? false
+            let connectionCount = networkService.connections.filter { connection in
+                connection.sourceId == nodeId || connection.targetId == nodeId
+            }.count
+            return connectionCount > 2 // Nodes with more than 2 connections are critical
         }
         
         if criticalNodes.isEmpty {
@@ -192,15 +191,12 @@ public class SmartFocusCalculator {
         
         for nodeId in nodeIds {
             let weight = focusWeights[nodeId] ?? 1.0
-            // TODO: Get actual node position
-            let position = SCNVector3(
-                Float.random(in: -1...1),
-                Float.random(in: -1...1),
-                Float.random(in: -1...1)
-            )
-            
-            weightedPosition = weightedPosition + position * weight
-            totalWeight += weight
+            // Get actual node position
+            if let node = networkService.nodes.first(where: { $0.id == nodeId }) {
+                let position = Math.GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
+                weightedPosition = weightedPosition + position * weight
+                totalWeight += weight
+            }
         }
         
         guard totalWeight > 0 else { return nil }
@@ -215,32 +211,48 @@ public class SmartFocusCalculator {
         var regionCounts: [String: Int] = [:]
         
         for nodeId in nodeIds {
-            // TODO: Get actual node position
-            let position = SCNVector3(
-                Float.random(in: -1...1),
-                Float.random(in: -1...1),
-                Float.random(in: -1...1)
-            )
-            
-            let region = getRegion(for: position)
-            regionCounts[region, default: 0] += 1
+            // Get actual node position
+            if let node = networkService.nodes.first(where: { $0.id == nodeId }) {
+                let position = Math.GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
+                let region = getRegion(for: position)
+                regionCounts[region, default: 0] += 1
+            }
         }
         
         return regionCounts
     }
     
     private func getRegion(for position: SCNVector3) -> String {
-        // Simple grid-based region classification
-        let gridSize: Float = 10.0
-        let gridX = Int(floor(position.x / gridSize))
-        let gridY = Int(floor(position.y / gridSize))
+        // Geographic region classification based on lat/lon
+        let lat = asin(position.y) * 180.0 / .pi
+        let lon = atan2(position.z, position.x) * 180.0 / .pi
         
-        return "\(gridX),\(gridY)"
+        // Classify by hemisphere and continent
+        let hemisphere = lat >= 0 ? "N" : "S"
+        let continent: String
+        
+        if lon >= -30 && lon <= 60 {
+            continent = "EU" // Europe/Africa
+        } else if lon >= -170 && lon <= -50 {
+            continent = "AM" // Americas
+        } else if lon >= 60 && lon <= 180 {
+            continent = "AS" // Asia/Oceania
+        } else {
+            continent = "OT" // Other
+        }
+        
+        return "\(hemisphere)\(continent)"
     }
     
     private func getNodesInRegion(_ nodeIds: [String], region: String) -> [String] {
-        // TODO: Implement actual region-based node filtering
-        return nodeIds
+        // Implement actual region-based node filtering
+        return nodeIds.filter { nodeId in
+            if let node = networkService.nodes.first(where: { $0.id == nodeId }) {
+                let position = Math.GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
+                return getRegion(for: position) == region
+            }
+            return false
+        }
     }
 }
 
@@ -252,10 +264,10 @@ private extension SCNVector3 {
     }
     
     static func * (lhs: SCNVector3, rhs: Float) -> SCNVector3 {
-        SCNVector3(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs)
+        SCNVector3(lhs.x * CGFloat(rhs), lhs.y * CGFloat(rhs), lhs.z * CGFloat(rhs))
     }
     
     static func / (lhs: SCNVector3, rhs: Float) -> SCNVector3 {
-        SCNVector3(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs)
+        SCNVector3(lhs.x / CGFloat(rhs), lhs.y / CGFloat(rhs), lhs.z / CGFloat(rhs))
     }
 }

@@ -5,7 +5,7 @@ import Combine
 
 /// High-performance graphics engine for 3D globe visualization
 /// Enhanced for Phase 3: Network topology, particle physics, and night mode
-/// TODO: Stage 6 - Integrate MemoryManager, GeometryPool, and enhanced PerformanceMonitor for performance optimization
+/// Stage 6: Integrated MemoryManager, GeometryPool, and enhanced PerformanceMonitor for performance optimization
 @MainActor
 @available(iOS 15.0, macOS 12.0, *)
 public class GraphicsEngine: ObservableObject {
@@ -14,19 +14,21 @@ public class GraphicsEngine: ObservableObject {
     @Published public var state = ApplicationState()
     public let networkService = NetworkService()
     
-    // TODO: Stage 6 - Add performance optimization components
+    // Stage 6: Performance optimization components
     private let memoryManager = MemoryManager()
     private let performanceMonitor = PerformanceMonitor()
+    private let geometryPool = GeometryPool()
     
     private var arcSystem: ArcSystem?
     private var particleSystem: ParticleSystem?
     private var burstController: BurstController?
     private var cameraTransitionManager: EnhancedCameraTransitionManager?
     private var lodManager: LODManager?
-    
-    // Stage 5: Auto-fit camera system
-    private var autoFitCameraSystem: AutoFitCameraSystem?
     private var connectionFailurePhysics: ConnectionFailurePhysics?
+    private var autoFitCameraSystem: AutoFitCameraSystem?
+    private var orbitCameraSystem: OrbitCameraSystem?
+    private var panCameraSystem: PanCameraSystem?
+    private var zoomCameraSystem: ZoomCameraSystem?
     
     // MARK: - Scene Properties
     @Published public var scene = SCNScene()
@@ -49,8 +51,10 @@ public class GraphicsEngine: ObservableObject {
         setupBindings()
         setupNightMode()
         
-        // TODO: Stage 6 - Initialize performance monitoring
+        // Stage 6: Initialize performance monitoring and optimization
         performanceMonitor.start()
+        memoryManager.initialize()
+        geometryPool.preallocateGeometries()
         
         // Initial data load
         networkService.loadData()
@@ -61,13 +65,60 @@ public class GraphicsEngine: ObservableObject {
         self.arcSystem = ArcSystem(scene: scene)
         self.particleSystem = ParticleSystem(scene: scene)
         self.burstController = BurstController(particleSystem: particleSystem!)
+        self.connectionFailurePhysics = ConnectionFailurePhysics(scene: scene)
         
         if let cam = cameraNode {
-            // Stage 5: Enhanced camera system with auto-fitting
             self.cameraTransitionManager = EnhancedCameraTransitionManager(cameraNode: cam, scene: scene)
-            self.autoFitCameraSystem = AutoFitCameraSystem(cameraNode: cam, scene: scene)
             self.lodManager = LODManager(cameraNode: cam)
+            self.autoFitCameraSystem = AutoFitCameraSystem(cameraNode: cam, scene: scene)
+            
+            // Stage 5: Connect LOD manager to performance components
+            lodManager?.setCameraNode(cam)
         }
+        
+        // Stage 6: Initialize performance optimization
+        setupPerformanceOptimization()
+    }
+    
+    // Stage 6: Performance optimization setup
+    private func setupPerformanceOptimization() {
+        // Initialize memory management
+        memoryManager.initialize()
+        
+        // Preallocate geometries
+        geometryPool.preallocateGeometries()
+        
+        // Connect performance monitoring to LOD system
+        performanceMonitor.onPerformanceUpdate = { [weak self] fps, memory, cache in
+            self?.handlePerformanceUpdate(fps: fps, memory: memory, cacheHitRate: cache)
+        }
+        
+        // Setup memory pressure handling
+        memoryManager.onMemoryWarning = { [weak self] in
+            self?.handleMemoryWarning()
+        }
+    }
+    
+    // Stage 6: Performance update handling
+    private func handlePerformanceUpdate(fps: Double, memory: Double, cacheHitRate: Double) {
+        // Auto-adjust LOD based on performance
+        if fps < 30 {
+            lodManager?.enableAggressiveMode()
+        } else if fps > 50 {
+            lodManager?.disableAggressiveMode()
+        }
+        
+        // Update performance metrics
+        frameRate = fps
+        drawCallCount = Int(memory) // Simplified for now
+    }
+    
+    // Stage 6: Memory pressure handling
+    private func handleMemoryWarning() {
+        // Clear caches and reduce LOD
+        geometryPool.clearCache()
+        lodManager?.enableAggressiveMode()
+        particleSystem?.setMaxParticleCount(50)
     }
     
     private func setupBindings() {
@@ -280,6 +331,42 @@ public class GraphicsEngine: ObservableObject {
         }
     }
     
+    // MARK: - Stage 5 Camera System Methods
+    
+    /// Focus camera on specific node with auto-fitting
+    public func focusCamera(on node: NetworkService.Node) {
+        let pos = Math.GeospatialMath.latLonToCartesian(lat: node.lat, lon: node.lon)
+        autoFitCameraSystem?.focusOnNode(at: pos, withRadius: 2.0)
+    }
+    
+    /// Enable/disable auto-fitting
+    public func setAutoFitEnabled(_ enabled: Bool) {
+        autoFitCameraSystem?.setEnabled(enabled)
+    }
+    
+    /// Set focus strategy
+    public func setFocusStrategy(_ strategy: String) {
+        switch strategy {
+        case "Performance":
+            autoFitCameraSystem?.setStrategy(.performance)
+        case "Visual":
+            autoFitCameraSystem?.setStrategy(.visual)
+        case "Network":
+            autoFitCameraSystem?.setStrategy(.network)
+        default:
+            autoFitCameraSystem?.setStrategy(.optimal)
+        }
+    }
+    
+    /// Handle gesture override
+    public func setGestureOverride(_ enabled: Bool) {
+        if enabled {
+            autoFitCameraSystem?.pause()
+        } else {
+            autoFitCameraSystem?.resume()
+        }
+    }
+    
     // MARK: - Network Visualization
     
     public func updateArcs(for connections: [NetworkService.Connection]) {
@@ -477,6 +564,46 @@ public class GraphicsEngine: ObservableObject {
         setupNightModeLighting(isNightMode)
     }
     
+    // MARK: - Stage 5 Camera System Enhancements
+    
+    /// Auto-fits camera to display specified nodes with intelligent framing
+    /// - Parameters:
+    ///   - nodeIds: Array of node identifiers to fit in view
+    ///   - mode: Current view mode (3D, 2D, or hybrid)
+    ///   - completion: Optional completion handler
+    public func autoFitCameraToNodes(
+        _ nodeIds: [String],
+        mode: ApplicationState.ViewMode = .globe3D,
+        completion: (() -> Void)? = nil
+    ) {
+        let viewMode = convertToViewMode(mode)
+        cameraTransitionManager?.autoFitToNodes(nodeIds, mode: viewMode, completion: completion)
+    }
+    
+    /// Smart focus using weighted algorithms
+    /// - Parameters:
+    ///   - nodeIds: Nodes to focus on
+    ///   - strategy: Focus strategy (connection density, critical path, etc.)
+    ///   - completion: Optional completion handler
+    public func smartFocusCamera(
+        _ nodeIds: [String],
+        strategy: FocusStrategy = .default,
+        completion: (() -> Void)? = nil
+    ) {
+        cameraTransitionManager?.smartFocus(nodeIds, strategy: strategy, completion: completion)
+    }
+    
+    /// Updates camera system for performance optimization
+    /// - Parameter deltaTime: Time since last frame
+    public func updateCameraSystem(deltaTime: TimeInterval) {
+        cameraTransitionManager?.update(deltaTime: deltaTime)
+    }
+    
+    /// Invalidates cached camera bounds data
+    public func invalidateCameraCache() {
+        cameraTransitionManager?.invalidateCache()
+    }
+    
     // MARK: - Visual Updates
     
     public func focusCamera(on node: NetworkService.Node) {
@@ -532,5 +659,22 @@ public class GraphicsEngine: ObservableObject {
         scene.rootNode.childNodes.forEach { $0.removeFromParentNode() }
         cancellables.removeAll()
         performanceTimer?.invalidate()
+        
+        // Stage 5: Cleanup camera system
+        cameraTransitionManager = nil
+        autoFitCameraSystem = nil
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func convertToViewMode(_ mode: ApplicationState.ViewMode) -> ViewMode {
+        switch mode {
+        case .globe3D:
+            return .globe3D
+        case .globe2D:
+            return .globe2D
+        case .hybrid:
+            return .hybrid
+        }
     }
 }

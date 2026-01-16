@@ -41,6 +41,19 @@ public class GeometryPool: ObservableObject {
     public init(memoryManager: MemoryManager) {
         self.memoryManager = memoryManager
         setupStandardPools()
+        
+        // Stage 6: Start maintenance timer
+        Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.performMaintenance()
+            }
+        }
+    }
+    
+    // Stage 6: Initialize geometry pool with memory manager
+    public func initialize() {
+        preallocateGeometries()
+        print("🚀 Geometry Pool initialized with memory management integration")
     }
     
     // MARK: - Pool Management
@@ -139,34 +152,59 @@ public class GeometryPool: ObservableObject {
     
     // MARK: - Standard Pool Setup
     private func setupStandardPools() {
-        // TODO: Stage 6 - Configure pools based on performance requirements
-        createPool(name: "sphere") {
-            SCNSphere(radius: 1.0, segments: 32)
+        // Stage 6: Configure pools based on performance requirements
+        createPool(name: "sphere", initialSize: 20) {
+            let sphere = SCNSphere(radius: 1.0)
+            sphere.segmentCount = 32
+            return sphere
         }
         
-        createPool(name: "tube") {
+        createPool(name: "tube", initialSize: 50) {
             SCNCylinder(radius: 0.01, height: 1.0)
         }
         
-        createPool(name: "plane") {
+        createPool(name: "particle", initialSize: 100) {
+            let sphere = SCNSphere(radius: 0.005)
+            sphere.segmentCount = 8
+            return sphere
+        }
+        
+        createPool(name: "plane", initialSize: 15) {
             SCNPlane(width: 1.0, height: 1.0)
+        }
+        
+        createPool(name: "label", initialSize: 25) {
+            let text = SCNText(string: "", extrusionDepth: 0.01)
+            text.font = NSFont.systemFont(ofSize: 0.1)
+            return text
         }
         
         print("✅ Standard geometry pools initialized")
     }
     
     private func createGeometryForPool(_ poolName: String) -> PooledGeometry? {
-        let geometry: SCNGeometry?
+        let poolId = UUID().uuidString
+        var geometry: SCNGeometry?
         
         switch poolName {
         case "sphere":
-            geometry = SCNSphere(radius: 1.0, segments: 32)
+            let sphere = SCNSphere(radius: 1.0)
+            sphere.segmentCount = 32
+            geometry = sphere
         case "tube":
             geometry = SCNCylinder(radius: 0.01, height: 1.0)
         case "plane":
             geometry = SCNPlane(width: 1.0, height: 1.0)
+        case "particle":
+            let sphere = SCNSphere(radius: 0.005)
+            sphere.segmentCount = 8
+            geometry = sphere
+        case "label":
+            let text = SCNText(string: "", extrusionDepth: 0.01)
+            text.font = NSFont.systemFont(ofSize: 0.1)
+            geometry = text
         default:
-            geometry = nil
+            return nil
         }
         
         guard let createdGeometry = geometry else { return nil }
@@ -176,7 +214,7 @@ public class GeometryPool: ObservableObject {
             poolId: "\(poolName)-\(UUID().uuidString)"
         )
         
-        // TODO: Stage 6 - Register with MemoryManager
+        // Stage 6: Register with MemoryManager
         _ = memoryManager.registerGeometry(id: pooledGeometry.poolId, geometry: createdGeometry)
         
         return pooledGeometry
@@ -215,7 +253,9 @@ public class GeometryPool: ObservableObject {
         let now = Date()
         let maxIdleTime: TimeInterval = 300 // 5 minutes
         
-        for (name, pool) in pools {
+        for poolName in pools.keys {
+            guard var pool = pools[poolName] else { continue }
+            
             // Remove excess idle geometries
             let idleGeometries = pool.available.filter { now.timeIntervalSince($0.lastUsed) > maxIdleTime }
             let excessCount = pool.available.count - 10 // Keep minimum of 10
@@ -225,15 +265,37 @@ public class GeometryPool: ObservableObject {
                 for _ in 0..<toRemove {
                     if !pool.available.isEmpty {
                         let removed = pool.available.removeLast()
-                        // TODO: Stage 6 - Release from MemoryManager
+                        // Stage 6: Release from MemoryManager
                         memoryManager.releaseGeometry(id: removed.poolId)
                     }
                 }
             }
+            
+            pools[poolName] = pool
         }
         
         updateStatistics()
         print("🔧 Pool maintenance completed")
+    }
+    
+    // Stage 6: Pre-allocate geometries for better performance
+    public func preallocateGeometries() {
+        for (name, pool) in pools {
+            let targetCount = max(10, pool.totalCreated / 2) // Pre-allocate 50% of peak usage
+            let currentCount = pool.available.count + pool.active
+            
+            if currentCount < targetCount {
+                let toCreate = targetCount - currentCount
+                for _ in 0..<toCreate {
+                    if let geometry = createGeometryForPool(name) {
+                        pools[name]?.available.append(geometry)
+                    }
+                }
+                print("📦 Pre-allocated \(toCreate) geometries for pool '\(name)'")
+            }
+        }
+        
+        updateStatistics()
     }
     
     // MARK: - Cleanup

@@ -4,11 +4,16 @@ import Combine
 
 /// Advanced Level of Detail (LOD) manager for performance optimization
 /// Phase 3: Intelligent LOD system for network topology and particle effects
-/// TODO: Stage 6 - Integrate with MemoryManager and PerformanceMonitor for comprehensive optimization
+/// Stage 5: Enhanced with camera-aware LOD adjustments for auto-fitting system
 @available(iOS 15.0, macOS 12.0, *)
 public class LODManager: ObservableObject {
     
-    // TODO: Stage 6 - Add performance optimization components
+    // Stage 5: Camera system integration
+    private var cameraNode: SCNNode?
+    private var lastCameraPosition: SCNVector3 = SCNVector3Zero
+    private var cameraMovementThreshold: Float = 0.5
+    
+    // Stage 6: Performance optimization components
     private let memoryManager: MemoryManager
     private let performanceMonitor: PerformanceMonitor
     
@@ -70,7 +75,10 @@ public class LODManager: ObservableObject {
     private let cameraNode: SCNNode
     private var currentLOD: LODLevel = .high
     private var lodUpdateTimer: Timer?
-    private var performanceMonitor: PerformanceMonitor?
+    
+    // Stage 6: Performance optimization components
+    private let memoryManager: MemoryManager
+    private let performanceMonitor: PerformanceMonitor
     
     @Published public var currentLODLevel: LODLevel = .high
     @Published public var isAggressiveMode: Bool = false
@@ -84,14 +92,109 @@ public class LODManager: ObservableObject {
     private let minAcceptableFPS: Double = 30.0
     
     // MARK: - Initialization
-    public init(cameraNode: SCNNode) {
+    
+    public init(cameraNode: SCNNode? = nil) {
         self.cameraNode = cameraNode
+        self.memoryManager = MemoryManager()
         self.performanceMonitor = PerformanceMonitor()
+        
+        // Stage 5: Initialize camera tracking
+        if let camera = cameraNode {
+            self.lastCameraPosition = camera.position
+        }
+        
+        // Stage 6: Initialize performance monitoring
+        startPerformanceTracking()
+        
         setupLODCaches()
         startLODUpdates()
     }
     
-    // MARK: - LOD Management
+    // Stage 5: Camera system integration
+    public func setCameraNode(_ camera: SCNNode) {
+        self.cameraNode = camera
+        self.lastCameraPosition = camera.position
+    }
+    
+    // Stage 5: LOD-aware bounds calculations for camera auto-fitting
+    public func calculateOptimalBounds(for nodes: [SCNNode]) -> (center: SCNVector3, radius: Float) {
+        guard !nodes.isEmpty else { return (SCNVector3Zero, 1.0) }
+        
+        let currentLOD = currentLODLevel
+        let lodMultiplier = currentLOD.distanceThreshold / 10.0
+        
+        var minBounds = SCNVector3(Float.greatestFiniteMagnitude, Float.greatestFiniteMagnitude, Float.greatestFiniteMagnitude)
+        var maxBounds = SCNVector3(-Float.greatestFiniteMagnitude, -Float.greatestFiniteMagnitude, -Float.greatestFiniteMagnitude)
+        
+        for node in nodes {
+            let worldPos = node.worldPosition
+            minBounds.x = min(minBounds.x, worldPos.x)
+            minBounds.y = min(minBounds.y, worldPos.y)
+            minBounds.z = min(minBounds.z, worldPos.z)
+            
+            maxBounds.x = max(maxBounds.x, worldPos.x)
+            maxBounds.y = max(maxBounds.y, worldPos.y)
+            maxBounds.z = max(maxBounds.z, worldPos.z)
+        }
+        
+        let center = SCNVector3(
+            (minBounds.x + maxBounds.x) / 2,
+            (minBounds.y + maxBounds.y) / 2,
+            (minBounds.z + maxBounds.z) / 2
+        )
+        
+        let size = SCNVector3(
+            maxBounds.x - minBounds.x,
+            maxBounds.y - minBounds.y,
+            maxBounds.z - minBounds.z
+        )
+        
+        let radius = max(max(size.x, size.y), size.z) * lodMultiplier
+        
+        return (center, radius)
+    }
+    
+    // Stage 6: Performance tracking
+    private func startPerformanceTracking() {
+        performanceMonitor.start()
+        
+        // Monitor FPS and adjust LOD dynamically
+        Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.adjustLODBasedOnPerformance()
+            }
+            .store(in: &cancellables)
+    }
+    
+    // Stage 5: Dynamic LOD scaling based on camera performance metrics
+    private func adjustLODBasedOnPerformance() {
+        let currentFPS = performanceMonitor.currentFPS
+        
+        if currentFPS < minAcceptableFPS {
+            // Performance is poor, reduce LOD
+            if currentLODLevel.rawValue < LODLevel.allCases.count - 1 {
+                currentLODLevel = LODLevel(rawValue: currentLODLevel.rawValue + 1) ?? .low
+            }
+        } else if currentFPS > targetFPS + 10 {
+            // Performance is excellent, can increase LOD
+            if currentLODLevel.rawValue > 0 {
+                currentLODLevel = LODLevel(rawValue: currentLODLevel.rawValue - 1) ?? .high
+            }
+        }
+    }
+    
+    // Stage 5: Camera movement detection for LOD updates
+    private func detectCameraMovement() -> Bool {
+        guard let camera = cameraNode else { return false }
+        
+        let distance = calculateDistance(from: lastCameraPosition, to: camera.position)
+        if distance > cameraMovementThreshold {
+            lastCameraPosition = camera.position
+            return true
+        }
+        return false
+    }
     
     /// Updates LOD for all visible objects based on camera distance
     public func updateLOD(for node: SCNNode) {

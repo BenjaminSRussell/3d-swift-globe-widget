@@ -1,13 +1,31 @@
 import SwiftUI
 
 /// Main entry point for the 3D Globe visualization.
-/// Phase 3 Enhanced: Network topology, particle physics, and night mode
+/// Uses the modular GraphicsEngine for rendering and state management.
+/// Stage 5: Enhanced with intelligent camera auto-fitting and smart focus capabilities
 @available(iOS 15.0, macOS 12.0, *)
 public struct Globe3DWidget: View {
+    
+    // TODO: Stage 5 - Implement camera system status indicators (performance metrics, cache status)
+    // TODO: Stage 5 - Add gesture controls for manual camera override of auto-fit system
+    
+    // Stage 5: Camera system controls
+    @State private var autoFitEnabled: Bool = true
+    @State private var focusStrategy: FocusStrategy = .optimal
+    @State private var showCameraStatus: Bool = true
+    @State private var gestureOverrideEnabled: Bool = false
     
     @StateObject private var viewModel = GlobeViewModel()
     @StateObject private var graphicsEngine = GraphicsEngine()
     @StateObject private var performanceMonitor: PerformanceMonitor
+    
+    // Stage 5: Focus strategies
+    public enum FocusStrategy: String, CaseIterable {
+        case optimal = "Optimal"
+        case performance = "Performance"
+        case visual = "Visual"
+        case network = "Network"
+    }
     
     // Phase 3 State
     @State private var isNightMode: Bool = true
@@ -100,6 +118,19 @@ public struct Globe3DWidget: View {
                 .padding(.leading, 20)
                 .padding(.top, 100)
             }
+            
+            // Stage 5: Camera Status Overlay
+            if showCameraStatus {
+                CameraStatusOverlay(
+                    graphicsEngine: graphicsEngine,
+                    performanceMonitor: performanceMonitor,
+                    autoFitEnabled: $autoFitEnabled,
+                    focusStrategy: $focusStrategy,
+                    gestureOverrideEnabled: $gestureOverrideEnabled
+                )
+                .padding(.trailing, 20)
+                .padding(.top, 100)
+            }
         }
         .onAppear {
             performanceMonitor.start()
@@ -112,6 +143,87 @@ public struct Globe3DWidget: View {
         .onChange(of: isNightMode) { newValue in
             graphicsEngine.updateForNightMode(newValue)
         }
+    }
+}
+
+// MARK: - Stage 5 Camera System Components
+
+/// Camera status and control overlay
+private struct CameraStatusOverlay: View {
+    let graphicsEngine: GraphicsEngine
+    let performanceMonitor: PerformanceMonitor
+    @Binding var autoFitEnabled: Bool
+    @Binding var focusStrategy: Globe3DWidget.FocusStrategy
+    @Binding var gestureOverrideEnabled: Bool
+    
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 12) {
+            // Camera Status
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Camera System")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                HStack {
+                    Text("Auto-Fit:")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                    
+                    Toggle("", isOn: $autoFitEnabled)
+                        .toggleStyle(SwitchToggleStyle(tint: .blue))
+                }
+                
+                Picker("Strategy", selection: $focusStrategy) {
+                    ForEach(Globe3DWidget.FocusStrategy.allCases, id: \.self) { strategy in
+                        Text(strategy.rawValue).tag(strategy)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .font(.caption2)
+            }
+            
+            // Performance Metrics
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Performance")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("FPS: \(Int(performanceMonitor.currentFPS))")
+                    .font(.caption2)
+                    .foregroundColor(performanceMonitor.currentFPS >= 30 ? .green : .red)
+                
+                Text("Memory: \(Int(performanceMonitor.memoryUsage))MB")
+                    .font(.caption2)
+                    .foregroundColor(.cyan)
+                
+                Text("Cache: \(Int(performanceMonitor.cacheHitRate * 100))%")
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            }
+            
+            // Gesture Override
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Controls")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Toggle("Manual Override", isOn: $gestureOverrideEnabled)
+                    .toggleStyle(SwitchToggleStyle(tint: .orange))
+                    .font(.caption2)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.black.opacity(0.8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.blue.opacity(0.5), lineWidth: 1)
+                )
+        )
     }
 }
 
