@@ -4,34 +4,35 @@
 import PackageDescription
 
 let package = Package(
-    name: "3d-swift-globe-widget",
+    name: "TitanEngine",
     platforms: [
-        .iOS(.v15),
         .macOS(.v12)
     ],
     products: [
         .library(
-            name: "3d-swift-globe-widget",
-            targets: ["3d-swift-globe-widget"]
+            name: "TitanCore",
+            targets: ["TitanCore"]
         ),
         .executable(
-            name: "GlobeDemo",
-            targets: ["GlobeDemo"]
+            name: "TitanApp", // Renamed from TitanDemo
+            targets: ["TitanApp"]
         )
     ],
     targets: [
         .target(
-            name: "3d-swift-globe-widget",
-            dependencies: []
+            name: "TitanCore",
+            dependencies: [],
+            path: "Sources/TitanCore",
+            resources: [] 
         ),
         .executableTarget(
-            name: "GlobeDemo",
-            dependencies: ["3d-swift-globe-widget"],
-            path: "Sources/GlobeDemo"
+            name: "TitanApp", // Renamed from TitanDemo
+            dependencies: ["TitanCore"],
+            path: "Sources/TitanApp"
         ),
         .testTarget(
-            name: "3d-swift-globe-widgetTests",
-            dependencies: ["3d-swift-globe-widget"]
-        ),
+            name: "TitanCoreTests",
+            dependencies: ["TitanCore"]
+        )
     ]
 )
