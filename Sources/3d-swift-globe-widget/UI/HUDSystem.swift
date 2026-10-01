@@ -59,6 +59,7 @@ struct HUDTopBar: View {
             )
         }
         .padding()
+        .ignoresSafeArea(edges: .top)
     }
 }
 
@@ -122,6 +123,7 @@ struct HUDBottomBar: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .padding(.bottom, 20)
+        .ignoresSafeArea(edges: .bottom)
     }
 }
 

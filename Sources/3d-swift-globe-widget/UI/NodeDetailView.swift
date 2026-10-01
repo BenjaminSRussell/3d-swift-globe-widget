@@ -16,30 +16,32 @@ struct NodeDetailView: View {
                     .font(.system(.title2, design: .monospaced))
                     .bold()
                     .foregroundColor(themeManager.accentColor)
-                
+
                 Spacer()
-                
+
                 // Status Indicator
                 Circle()
                     .fill(node.status == .error ? Color.red : Color.green)
                     .frame(width: 8, height: 8)
                     .shadow(color: (node.status == .error ? Color.red : Color.green).opacity(0.8), radius: 5)
-                
+
                 Text(node.status == .error ? "CRITICAL" : "ONLINE")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(node.status == .error ? .red : .green)
             }
-            
+
             Divider()
                 .background(Color.white.opacity(0.3))
-            
-            // Stats Grid
-            VStack(alignment: .leading, spacing: 8) {
-                StatRow(label: "TYPE", value: node.type)
-                StatRow(label: "LATITUDE", value: String(format: "%.4f", node.lat))
-                StatRow(label: "LONGITUDE", value: String(format: "%.4f", node.lon))
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    StatRow(label: "TYPE", value: node.type)
+                    StatRow(label: "LATITUDE", value: String(format: "%.4f", node.lat))
+                    StatRow(label: "LONGITUDE", value: String(format: "%.4f", node.lon))
+                }
             }
-            
+            .frame(maxHeight: 200)
+
             // Action Button
             Button(action: onClose) {
                 HStack {
