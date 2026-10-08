@@ -129,8 +129,8 @@ public struct GlobeView: NSViewRepresentable {
         }
 
         @MainActor
-        public func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
-            guard let node = annotation as? NodeAnnotation else { return }
+        public func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let node = view.annotation as? NodeAnnotation else { return }
             let parent = self.parent
             let id = node.nodeID
             Task { @MainActor in parent.selectedNodeID = id }
