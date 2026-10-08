@@ -1,0 +1,309 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.4874,
+          39.0438
+        ]
+      },
+      "properties": {
+        "id": "us-east",
+        "name": "US-East (N. Virginia)",
+        "intensity": 20,
+        "region": "us"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -119.7006,
+          45.8399
+        ]
+      },
+      "properties": {
+        "id": "us-west-or",
+        "name": "US-West (Oregon)",
+        "intensity": 15,
+        "region": "us"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -121.8863,
+          37.3382
+        ]
+      },
+      "properties": {
+        "id": "us-west-ca",
+        "name": "US-West (California)",
+        "intensity": 18,
+        "region": "us"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -6.2603,
+          53.3498
+        ]
+      },
+      "properties": {
+        "id": "eu-west",
+        "name": "EU-West (Ireland)",
+        "intensity": 15,
+        "region": "eu"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.6821,
+          50.1109
+        ]
+      },
+      "properties": {
+        "id": "eu-central",
+        "name": "EU-Central (Frankfurt)",
+        "intensity": 16,
+        "region": "eu"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.6503,
+          35.6762
+        ]
+      },
+      "properties": {
+        "id": "apac-tokyo",
+        "name": "APAC (Tokyo)",
+        "intensity": 20,
+        "region": "apac"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          103.8198,
+          1.3521
+        ]
+      },
+      "properties": {
+        "id": "apac-sg",
+        "name": "APAC (Singapore)",
+        "intensity": 14,
+        "region": "apac"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          151.2093,
+          -33.8688
+        ]
+      },
+      "properties": {
+        "id": "aus-sydney",
+        "name": "AUS (Sydney)",
+        "intensity": 12,
+        "region": "aus"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -46.6333,
+          -23.5505
+        ]
+      },
+      "properties": {
+        "id": "sa-saopaulo",
+        "name": "SA (São Paulo)",
+        "intensity": 10,
+        "region": "sa"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -77.4874,
+            39.0438
+          ],
+          [
+            -121.8863,
+            37.3382
+          ]
+        ]
+      },
+      "properties": {
+        "from": "us-east",
+        "to": "us-west-ca"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -77.4874,
+            39.0438
+          ],
+          [
+            -6.2603,
+            53.3498
+          ]
+        ]
+      },
+      "properties": {
+        "from": "us-east",
+        "to": "eu-west"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -6.2603,
+            53.3498
+          ],
+          [
+            8.6821,
+            50.1109
+          ]
+        ]
+      },
+      "properties": {
+        "from": "eu-west",
+        "to": "eu-central"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -119.7006,
+            45.8399
+          ],
+          [
+            139.6503,
+            35.6762
+          ]
+        ]
+      },
+      "properties": {
+        "from": "us-west-or",
+        "to": "apac-tokyo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.6503,
+            35.6762
+          ],
+          [
+            103.8198,
+            1.3521
+          ]
+        ]
+      },
+      "properties": {
+        "from": "apac-tokyo",
+        "to": "apac-sg"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            103.8198,
+            1.3521
+          ],
+          [
+            151.2093,
+            -33.8688
+          ]
+        ]
+      },
+      "properties": {
+        "from": "apac-sg",
+        "to": "aus-sydney"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -77.4874,
+            39.0438
+          ],
+          [
+            -46.6333,
+            -23.5505
+          ]
+        ]
+      },
+      "properties": {
+        "from": "us-east",
+        "to": "sa-saopaulo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            8.6821,
+            50.1109
+          ],
+          [
+            103.8198,
+            1.3521
+          ]
+        ]
+      },
+      "properties": {
+        "from": "eu-central",
+        "to": "apac-sg"
+      }
+    }
+  ]
+}
