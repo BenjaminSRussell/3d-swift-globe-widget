@@ -12,10 +12,6 @@ let package = Package(
         .library(
             name: "TitanCore",
             targets: ["TitanCore"]
-        ),
-        .executable(
-            name: "TitanApp", // Renamed from TitanDemo
-            targets: ["TitanApp"]
         )
     ],
     targets: [
@@ -23,16 +19,19 @@ let package = Package(
             name: "TitanCore",
             dependencies: [],
             path: "Sources/TitanCore",
-            resources: [] 
-        ),
-        .executableTarget(
-            name: "TitanApp", // Renamed from TitanDemo
-            dependencies: ["TitanCore"],
-            path: "Sources/TitanApp"
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "TitanCoreTests",
-            dependencies: ["TitanCore"]
+            dependencies: ["TitanCore"],
+            resources: [.copy("Fixtures")]
         )
     ]
 )
+
+// The SwiftUI/MapKit demo app only exists on macOS. TitanCore's data, geometry, config and
+// bookmark code (and its tests) also build on Linux; the MapKit views are `#if canImport(MapKit)`.
+#if os(macOS)
+package.products.append(.executable(name: "TitanApp", targets: ["TitanApp"]))
+package.targets.append(.executableTarget(name: "TitanApp", dependencies: ["TitanCore"], path: "Sources/TitanApp"))
+#endif

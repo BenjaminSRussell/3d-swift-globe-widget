@@ -1,10 +1,11 @@
+#if canImport(MapKit)
 import MapKit
 import Foundation
 
 // MARK: - Visualizer System
 @MainActor
 public class ArcVisualizer {
-    public static func animateArc(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D, on mapView: MKMapView) {
+    public static func animateArc(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D, duration: TimeInterval = 3.0, on mapView: MKMapView) {
         // Create the "Dot" annotation
         let packet = MKPointAnnotation()
         packet.coordinate = start
@@ -24,7 +25,6 @@ public class ArcVisualizer {
         
         // Use Swift Concurrency Task for Animation Loop to avoid Sendable warnings
         Task {
-            let duration: TimeInterval = 3.0
             let startTime = Date()
             var frameCount = 0
             
@@ -75,3 +75,4 @@ public class ArcVisualizer {
         }
     }
 }
+#endif
